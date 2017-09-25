@@ -20,13 +20,17 @@ pid = str(int(sys.argv[1]))
 print 'Attaching to %s' % pid
 
 sshpipe = Popen(['strace', '-s', '16384', '-p', pid, "-e", \
-    "read"], shell=False, stdout=PIPE, stderr=PIPE)
+    "write", '-f'], shell=False, stdout=PIPE, stderr=PIPE)
 
 while 1:
 	sshpipe.poll()
 	output = sshpipe.stderr.readline()
-	if 'read(' in output:
-		out = re.findall('read\(10, \"(.*)\", [0-9]+\) += [0-9]+',output)
+	if 'write(' in output:
+		# Try to catch child output
+                out = re.findall('\[pid [0-9]+\] write\([0-9]*, \"(.*)\", [0-9]+\) += [0-9]+',output,re.DOTALL)
+                # Else catch std output
+                if not out:
+			out = re.findall('write\([0-9]*, \"(.*)\", [0-9]+\) += [0-9]+',output)
 		if isinstance(out,list) and len(out):
 			sys.stdout.flush()
 			sys.stdout.write(str(out[0].decode('string_escape')))
